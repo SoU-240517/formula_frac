@@ -3,26 +3,57 @@ PyQt6を用いてマンデルブロ集合を静的に表示するシンプルな
 800x600ピクセルのウィンドウにグレースケールで描画します。
 """
 import sys
-from PyQt6.QtWidgets import QApplication, QLabel, QMainWindow
+from PyQt6.QtWidgets import QApplication, QLabel, QMainWindow, QLineEdit, QPushButton, QVBoxLayout, QWidget
 from PyQt6.QtGui import QImage, QPixmap
 from PyQt6.QtCore import Qt
+import math
+import cmath
 
 
-def mandelbrot_point(c, max_iter=100):
+def mandelbrot_point(c, formula_str, max_iter=100):
     """
     1点分のマンデルブロ集合の発散判定を行い、発散までの反復回数を返す。
+    ユーザーが指定した式（formula_str）でzを更新する。
 
     Args:
         c (complex): 判定する複素数
+        formula_str (str): ユーザーが入力したzの更新式（例: 'z * z + c'）
         max_iter (int): 発散判定の最大繰り返し回数
 
     Returns:
         int: 発散までの反復回数（発散しなければmax_iter）
     """
+    # zの初期値は0
     z = 0
     now_itre = 0
+    # 安全な評価用の辞書を作成
+    safe_dict = {
+        'z': z,
+        'c': c,
+        'n': now_itre,
+        # math, cmathの関数を一部許可
+        'abs': abs,
+        'sin': cmath.sin,
+        'cos': cmath.cos,
+        'exp': cmath.exp,
+        'log': cmath.log,
+        'pow': pow,
+        'sqrt': cmath.sqrt,
+        're': lambda x: x.real,
+        'im': lambda x: x.imag,
+        'pi': math.pi,
+        'e': math.e,
+    }
     while abs(z) <= 2 and now_itre < max_iter:
-        z = z * z + c
+        safe_dict['z'] = z  # 現在のzを更新
+        safe_dict['c'] = c  # cも更新
+        safe_dict['n'] = now_itre  # 反復回数も渡す
+        try:
+            # ユーザー式を安全に評価
+            z = eval(formula_str, {"__builtins__": {}}, safe_dict)
+        except Exception:
+            # 式が不正な場合は強制終了
+            return 0
         now_itre += 1
     return now_itre
 
@@ -30,6 +61,17 @@ def mandelbrot_point(c, max_iter=100):
 def complex_from_pixel(x, y, width, height, re_start, re_end, im_start, im_end):
     """
     ピクセル座標(x, y)を複素平面上の座標に変換する。
+    Args:
+        x (int): ピクセルのx座標
+        y (int): ピクセルのy座標
+        width (int): 画像の幅
+        height (int): 画像の高さ
+        re_start (float): 実部の開始値
+        re_end (float): 実部の終了値
+        im_start (float): 虚部の開始値
+        im_end (float): 虚部の終了値
+    Returns:
+        complex: 対応する複素数
     """
     c_re = re_start + (x / width) * (re_end - re_start)
     c_im = im_start + (y / height) * (im_end - im_start)
@@ -39,22 +81,37 @@ def complex_from_pixel(x, y, width, height, re_start, re_end, im_start, im_end):
 def pixel_color(n, max_iter):
     """
     反復回数nからグレースケールの色を計算する。
+    Args:
+        n (int): 反復回数
+        max_iter (int): 最大反復回数
+    Returns:
+        int: 24bit RGB値
     """
     color = 255 - int(n * 255 / max_iter)
     return (color << 16) | (color << 8) | color
 
 
-def generate_mandelbrot_image(width, height, max_iter=100):
+def generate_mandelbrot_image(width, height, formula_str, max_iter=100):
     """
     マンデルブロ集合の画像を生成する関数。
+    Args:
+        width (int): 画像の幅
+        height (int): 画像の高さ
+        formula_str (str): ユーザーが入力したzの更新式
+        max_iter (int): 最大反復回数
+    Returns:
+        QImage: 生成された画像
     """
-    re_start, re_end = -2.0, 1.0
-    im_start, im_end = -1.2, 1.2
+    re_start, re_end = -2.0, 1.0  # 実部の範囲
+    im_start, im_end = -1.2, 1.2  # 虚部の範囲
     image = QImage(width, height, QImage.Format.Format_RGB32)
     for x in range(width):
         for y in range(height):
+            # ピクセルごとに複素数cを計算
             c = complex_from_pixel(x, y, width, height, re_start, re_end, im_start, im_end)
-            n = mandelbrot_point(c, max_iter)
+            # ユーザー式で反復計算
+            n = mandelbrot_point(c, formula_str, max_iter)
+            # 色を決定
             image.setPixel(x, y, pixel_color(n, max_iter))
     return image
 
@@ -62,20 +119,53 @@ def generate_mandelbrot_image(width, height, max_iter=100):
 class MandelbrotWindow(QMainWindow):
     """
     マンデルブロ集合を表示するメインウィンドウクラス。
+    ユーザーが数式を入力し、再描画できる。
     """
     def __init__(self):
         """
-        ウィンドウを初期化し、マンデルブロ集合画像を表示する。
+        ウィンドウを初期化し、マンデルブロ集合画像とUIを表示する。
         """
         super().__init__()
         self.setWindowTitle("マンデルブロ集合")
-        self.setFixedSize(800, 600)
-        label = QLabel(self)
-        label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        image = generate_mandelbrot_image(800, 600)
+        self.setFixedSize(800, 650)  # 入力欄分だけ高さを少し増やす
+
+        # メインウィジェットとレイアウト
+        central_widget = QWidget(self)
+        layout = QVBoxLayout(central_widget)
+
+        # 数式入力欄
+        self.formula_input = QLineEdit(self)
+        self.formula_input.setText("z * z + c")  # デフォルト式
+        self.formula_input.setPlaceholderText("zの更新式を入力 (例: z * z + c)")
+        layout.addWidget(self.formula_input)
+
+        # 再描画ボタン
+        self.redraw_button = QPushButton("再描画", self)
+        layout.addWidget(self.redraw_button)
+
+        # 画像表示用ラベル
+        self.label = QLabel(self)
+        self.label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(self.label)
+
+        self.setCentralWidget(central_widget)
+
+        # 最初の描画
+        self.update_image()
+
+        # ボタン押下時の処理を接続
+        self.redraw_button.clicked.connect(self.update_image)
+
+    def update_image(self):
+        """
+        入力された式でマンデルブロ集合画像を再生成し、表示する。
+        """
+        formula_str = self.formula_input.text()
+        # 画像生成（時間がかかる場合あり）
+#        image = generate_mandelbrot_image(800, 600, formula_str)
+        image = generate_mandelbrot_image(200, 150, formula_str)
         pixmap = QPixmap.fromImage(image)
-        label.setPixmap(pixmap)
-        self.setCentralWidget(label)
+        self.label.setPixmap(pixmap)
 
 
 def main():
