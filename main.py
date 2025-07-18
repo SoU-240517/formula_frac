@@ -5,7 +5,7 @@ PyQt6を用いてマンデルブロ集合を静的に表示するシンプルな
 import sys
 from PyQt6.QtWidgets import QApplication, QLabel, QMainWindow, QLineEdit, QPushButton, QVBoxLayout, QWidget
 from PyQt6.QtGui import QImage, QPixmap
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import Qt, QTimer, QThread, pyqtSignal
 import math
 import cmath
 
@@ -116,6 +116,19 @@ def generate_mandelbrot_image(width, height, formula_str, max_iter=100):
     return image
 
 
+# 画像生成用ワーカースレッド
+class MandelbrotWorker(QThread):
+    finished = pyqtSignal(QImage)
+    def __init__(self, width, height, formula_str, parent=None):
+        super().__init__(parent)
+        self.width = width
+        self.height = height
+        self.formula_str = formula_str
+    def run(self):
+        image = generate_mandelbrot_image(self.width, self.height, self.formula_str)
+        self.finished.emit(image)
+
+
 class MandelbrotWindow(QMainWindow):
     """
     マンデルブロ集合を表示するメインウィンドウクラス。
@@ -150,22 +163,49 @@ class MandelbrotWindow(QMainWindow):
 
         self.setCentralWidget(central_widget)
 
+        # ステータスバー追加
+        self.status = self.statusBar()
+        self.status.showMessage("準備完了")
+
+        # アニメーション用タイマー
+        self.anim_timer = QTimer(self)
+        self.anim_timer.setInterval(300)  # 300msごと
+        self.anim_timer.timeout.connect(self.update_anim)
+        self.anim_step = 0
+        self.anim_base = "計算中"
+
         # 最初の描画
         self.update_image()
 
         # ボタン押下時の処理を接続
         self.redraw_button.clicked.connect(self.update_image)
 
+    def update_anim(self):
+        # ドットが1~3個でループ
+        self.anim_step = (self.anim_step + 1) % 4
+        dots = "." * self.anim_step
+        self.status.showMessage(self.anim_base + dots)
+
     def update_image(self):
         """
         入力された式でマンデルブロ集合画像を再生成し、表示する。
         """
         formula_str = self.formula_input.text()
-        # 画像生成（時間がかかる場合あり）
-#        image = generate_mandelbrot_image(800, 600, formula_str)
-        image = generate_mandelbrot_image(200, 150, formula_str)
+        # ステータスバーに計算中を表示しアニメーション開始
+        self.anim_step = 0
+        self.anim_base = "計算中"
+        self.anim_timer.start()
+        self.status.showMessage(self.anim_base)
+        # 画像生成を別スレッドで実行
+        self.worker = MandelbrotWorker(200, 150, formula_str)
+        self.worker.finished.connect(self.on_image_ready)
+        self.worker.start()
+
+    def on_image_ready(self, image):
         pixmap = QPixmap.fromImage(image)
         self.label.setPixmap(pixmap)
+        self.anim_timer.stop()
+        self.status.showMessage("完了")
 
 
 def main():
