@@ -23,6 +23,7 @@ def mandelbrot_point(c, formula_str, max_iter=100):
     Returns:
         int: 発散までの反復回数（発散しなければmax_iter）
     """
+    print("mandelbrot_point 実行")
     # zの初期値は0
     z = 0
     now_itre = 0
@@ -73,6 +74,7 @@ def complex_from_pixel(x, y, width, height, re_start, re_end, im_start, im_end):
     Returns:
         complex: 対応する複素数
     """
+    print("complex_from_pixel 実行")
     c_re = re_start + (x / width) * (re_end - re_start)
     c_im = im_start + (y / height) * (im_end - im_start)
     return complex(c_re, c_im)
@@ -87,6 +89,7 @@ def pixel_color(n, max_iter):
     Returns:
         int: 24bit RGB値
     """
+    print("pixel_color 実行")
     color = 255 - int(n * 255 / max_iter)
     return (color << 16) | (color << 8) | color
 
@@ -102,6 +105,7 @@ def generate_mandelbrot_image(width, height, formula_str, max_iter=100):
     Returns:
         QImage: 生成された画像
     """
+    print("generate_mandelbrot_image 実行")
     re_start, re_end = -2.0, 1.0  # 実部の範囲
     im_start, im_end = -1.2, 1.2  # 虚部の範囲
     image = QImage(width, height, QImage.Format.Format_RGB32)
@@ -119,12 +123,18 @@ def generate_mandelbrot_image(width, height, formula_str, max_iter=100):
 # 画像生成用ワーカースレッド
 class MandelbrotWorker(QThread):
     finished = pyqtSignal(QImage)
+
+
     def __init__(self, width, height, formula_str, parent=None):
+        print("MandelbrotWorker __init__ 実行")
         super().__init__(parent)
         self.width = width
         self.height = height
         self.formula_str = formula_str
+
+
     def run(self):
+        print("MandelbrotWorker run 実行")
         image = generate_mandelbrot_image(self.width, self.height, self.formula_str)
         self.finished.emit(image)
 
@@ -138,6 +148,7 @@ class MandelbrotWindow(QMainWindow):
         """
         ウィンドウを初期化し、マンデルブロ集合画像とUIを表示する。
         """
+        print("MandelbrotWindow __init__ 実行")
         super().__init__()
         self.setWindowTitle("マンデルブロ集合")
         self.setFixedSize(800, 650)  # 入力欄分だけ高さを少し増やす
@@ -182,6 +193,7 @@ class MandelbrotWindow(QMainWindow):
 
     def update_anim(self):
         # ドットが1~3個でループ
+        print("MandelbrotWindow update_anim 実行")
         self.anim_step = (self.anim_step + 1) % 4
         dots = "." * self.anim_step
         self.status.showMessage(self.anim_base + dots)
@@ -190,6 +202,7 @@ class MandelbrotWindow(QMainWindow):
         """
         入力された式でマンデルブロ集合画像を再生成し、表示する。
         """
+        print("MandelbrotWindow update_image 実行")
         formula_str = self.formula_input.text()
         # ステータスバーに計算中を表示しアニメーション開始
         self.anim_step = 0
@@ -202,6 +215,7 @@ class MandelbrotWindow(QMainWindow):
         self.worker.start()
 
     def on_image_ready(self, image):
+        print("MandelbrotWindow on_image_ready 実行")
         pixmap = QPixmap.fromImage(image)
         self.label.setPixmap(pixmap)
         self.anim_timer.stop()
@@ -212,6 +226,7 @@ def main():
     """
     アプリケーションを起動し、メインウィンドウを表示するエントリーポイント。
     """
+    print("main 実行")
     app = QApplication(sys.argv)
     window = MandelbrotWindow()
     window.show()
