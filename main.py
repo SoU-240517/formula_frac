@@ -1,6 +1,6 @@
 """
-PyQt6を用いてマンデルブロ集合を静的に表示するシンプルなGUIアプリケーション。
-800x600ピクセルのウィンドウにグレースケールで描画します。
+PyQt6を用いて、ユーザーが任意のzの更新式を入力できるマンデルブロ集合ビジュアライザ。
+800x600ピクセルのウィンドウに、グレースケールで描画する。
 """
 import sys
 from PyQt6.QtWidgets import QApplication, QLabel, QMainWindow, QLineEdit, QPushButton, QVBoxLayout, QWidget
@@ -16,18 +16,16 @@ def mandelbrot_point(c, formula_str, max_iter=100):
     ユーザーが指定した式（formula_str）でzを更新する。
 
     Args:
-        c (complex): 判定する複素数
+        c (complex): 判定する複素数座標
         formula_str (str): ユーザーが入力したzの更新式（例: 'z * z + c'）
-        max_iter (int): 発散判定の最大繰り返し回数
+        max_iter (int): 最大反復回数
 
     Returns:
         int: 発散までの反復回数（発散しなければmax_iter）
     """
-    print("mandelbrot_point 実行")
-    # zの初期値は0
     z = 0
     now_itre = 0
-    # 安全な評価用の辞書を作成
+    # evalで使う安全な辞書を作成
     safe_dict = {
         'z': z,
         'c': c,
@@ -46,14 +44,13 @@ def mandelbrot_point(c, formula_str, max_iter=100):
         'e': math.e,
     }
     while abs(z) <= 2 and now_itre < max_iter:
-        safe_dict['z'] = z  # 現在のzを更新
-        safe_dict['c'] = c  # cも更新
-        safe_dict['n'] = now_itre  # 反復回数も渡す
+        safe_dict['z'] = z
+        safe_dict['c'] = c
+        safe_dict['n'] = now_itre
         try:
-            # ユーザー式を安全に評価
             z = eval(formula_str, {"__builtins__": {}}, safe_dict)
         except Exception:
-            # 式が不正な場合は強制終了
+            # 数式が不正な場合は0回で終了
             return 0
         now_itre += 1
     return now_itre
@@ -74,7 +71,6 @@ def complex_from_pixel(x, y, width, height, re_start, re_end, im_start, im_end):
     Returns:
         complex: 対応する複素数
     """
-    print("complex_from_pixel 実行")
     c_re = re_start + (x / width) * (re_end - re_start)
     c_im = im_start + (y / height) * (im_end - im_start)
     return complex(c_re, c_im)
@@ -87,16 +83,15 @@ def pixel_color(n, max_iter):
         n (int): 反復回数
         max_iter (int): 最大反復回数
     Returns:
-        int: 24bit RGB値
+        int: 24bit RGB値（グレースケール）
     """
-    print("pixel_color 実行")
     color = 255 - int(n * 255 / max_iter)
     return (color << 16) | (color << 8) | color
 
 
 def generate_mandelbrot_image(width, height, formula_str, max_iter=100):
     """
-    マンデルブロ集合の画像を生成する関数。
+    マンデルブロ集合の画像を生成する。
     Args:
         width (int): 画像の幅
         height (int): 画像の高さ
@@ -111,11 +106,8 @@ def generate_mandelbrot_image(width, height, formula_str, max_iter=100):
     image = QImage(width, height, QImage.Format.Format_RGB32)
     for x in range(width):
         for y in range(height):
-            # ピクセルごとに複素数cを計算
             c = complex_from_pixel(x, y, width, height, re_start, re_end, im_start, im_end)
-            # ユーザー式で反復計算
             n = mandelbrot_point(c, formula_str, max_iter)
-            # 色を決定
             image.setPixel(x, y, pixel_color(n, max_iter))
     return image
 
@@ -124,14 +116,12 @@ def generate_mandelbrot_image(width, height, formula_str, max_iter=100):
 class MandelbrotWorker(QThread):
     finished = pyqtSignal(QImage)
 
-
     def __init__(self, width, height, formula_str, parent=None):
         print("MandelbrotWorker __init__ 実行")
         super().__init__(parent)
         self.width = width
         self.height = height
         self.formula_str = formula_str
-
 
     def run(self):
         print("MandelbrotWorker run 実行")
@@ -192,8 +182,9 @@ class MandelbrotWindow(QMainWindow):
         self.redraw_button.clicked.connect(self.update_image)
 
     def update_anim(self):
-        # ドットが1~3個でループ
-        print("MandelbrotWindow update_anim 実行")
+        """
+        ステータスバーの「計算中...」アニメーションを更新する。
+        """
         self.anim_step = (self.anim_step + 1) % 4
         dots = "." * self.anim_step
         self.status.showMessage(self.anim_base + dots)
@@ -201,6 +192,7 @@ class MandelbrotWindow(QMainWindow):
     def update_image(self):
         """
         入力された式でマンデルブロ集合画像を再生成し、表示する。
+        画像生成はワーカースレッドで実行。
         """
         print("MandelbrotWindow update_image 実行")
         formula_str = self.formula_input.text()
@@ -215,6 +207,9 @@ class MandelbrotWindow(QMainWindow):
         self.worker.start()
 
     def on_image_ready(self, image):
+        """
+        画像生成完了時に呼ばれ、画像を表示し、アニメーションを止める。
+        """
         print("MandelbrotWindow on_image_ready 実行")
         pixmap = QPixmap.fromImage(image)
         self.label.setPixmap(pixmap)
