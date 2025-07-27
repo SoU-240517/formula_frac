@@ -10,26 +10,24 @@ import math
 import cmath
 
 
-def mandelbrot_point(c, formula_str, max_iter=100):
+def mandelbrot_point(c: complex, formula_str: str, max_iter: int = 100) -> int:
     """
     1点分のマンデルブロ集合の発散判定を行い、発散までの反復回数を返す。
     ユーザーが指定した式（formula_str）でzを更新する。
-
     Args:
         c (complex): 判定する複素数座標
         formula_str (str): ユーザーが入力したzの更新式（例: 'z * z + c'）
         max_iter (int): 最大反復回数
-
     Returns:
         int: 発散までの反復回数（発散しなければmax_iter）
     """
     z = 0
-    now_itre = 0
+    now_iter = 0
     # evalで使う安全な辞書を作成
     safe_dict = {
         'z': z,
         'c': c,
-        'n': now_itre,
+        'n': now_iter,
         # math, cmathの関数を一部許可
         'abs': abs,
         'sin': cmath.sin,
@@ -43,20 +41,20 @@ def mandelbrot_point(c, formula_str, max_iter=100):
         'pi': math.pi,
         'e': math.e,
     }
-    while abs(z) <= 2 and now_itre < max_iter:
+    while abs(z) <= 2 and now_iter < max_iter:
         safe_dict['z'] = z
         safe_dict['c'] = c
-        safe_dict['n'] = now_itre
+        safe_dict['n'] = now_iter
         try:
             z = eval(formula_str, {"__builtins__": {}}, safe_dict)
         except Exception:
             # 数式が不正な場合は0回で終了
             return 0
-        now_itre += 1
-    return now_itre
+        now_iter += 1
+    return now_iter
 
 
-def complex_from_pixel(x, y, width, height, re_start, re_end, im_start, im_end):
+def complex_from_pixel(x: int, y: int, width: int, height: int, re_start: float, re_end: float, im_start: float, im_end: float) -> complex:
     """
     ピクセル座標(x, y)を複素平面上の座標に変換する。
     Args:
@@ -76,7 +74,7 @@ def complex_from_pixel(x, y, width, height, re_start, re_end, im_start, im_end):
     return complex(c_re, c_im)
 
 
-def pixel_color(n, max_iter):
+def pixel_color(n: int, max_iter: int) -> int:
     """
     反復回数nからグレースケールの色を計算する。
     Args:
@@ -89,7 +87,7 @@ def pixel_color(n, max_iter):
     return (color << 16) | (color << 8) | color
 
 
-def generate_mandelbrot_image(width, height, formula_str, max_iter=100):
+def generate_mandelbrot_image(width: int, height: int, formula_str: str, max_iter: int = 100) -> QImage:
     """
     マンデルブロ集合の画像を生成する。
     Args:
@@ -114,9 +112,20 @@ def generate_mandelbrot_image(width, height, formula_str, max_iter=100):
 
 # 画像生成用ワーカースレッド
 class MandelbrotWorker(QThread):
+    """
+    マンデルブロ集合の画像生成をバックグラウンドで実行するワーカースレッド。
+    """
     finished = pyqtSignal(QImage)
 
-    def __init__(self, width, height, formula_str, parent=None):
+    def __init__(self, width: int, height: int, formula_str: str, parent=None):
+        """
+        ワーカースレッドを初期化する。
+        Args:
+            width (int): 画像の幅
+            height (int): 画像の高さ
+            formula_str (str): ユーザーが入力したzの更新式
+            parent (QObject): 親オブジェクト
+        """
         print("MandelbrotWorker __init__ 実行")
         super().__init__(parent)
         self.width = width
@@ -124,6 +133,9 @@ class MandelbrotWorker(QThread):
         self.formula_str = formula_str
 
     def run(self):
+        """
+        画像生成を実行し、完了したらfinishedシグナルを発行する。
+        """
         print("MandelbrotWorker run 実行")
         image = generate_mandelbrot_image(self.width, self.height, self.formula_str)
         self.finished.emit(image)
@@ -206,9 +218,11 @@ class MandelbrotWindow(QMainWindow):
         self.worker.finished.connect(self.on_image_ready)
         self.worker.start()
 
-    def on_image_ready(self, image):
+    def on_image_ready(self, image: QImage):
         """
         画像生成完了時に呼ばれ、画像を表示し、アニメーションを止める。
+        Args:
+            image (QImage): 生成された画像
         """
         print("MandelbrotWindow on_image_ready 実行")
         pixmap = QPixmap.fromImage(image)
