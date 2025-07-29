@@ -214,7 +214,7 @@ class MandelbrotWindow(QMainWindow):
         self.anim_timer.start()
         self.status.showMessage(self.anim_base)
         # 画像生成を別スレッドで実行
-        self.worker = MandelbrotWorker(200, 150, formula_str)
+        self.worker = MandelbrotWorker(800, 600, formula_str)
         self.worker.finished.connect(self.on_image_ready)
         self.worker.start()
 
