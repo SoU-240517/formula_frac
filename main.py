@@ -1,11 +1,13 @@
 """
 PyQt6を用いて、ユーザーが任意のzの更新式を入力できるマンデルブロ集合ビジュアライザ。
 設定はJSONファイルから読み込み、モジュール化された構造で実装。
+Numbaを使用した高速化を適用。
 """
 import sys
 import json
 from PyQt6.QtWidgets import QApplication, QMessageBox
 from mandelbrot_window import MandelbrotWindow
+from numba_utils import configure_numba, get_numba_info
 
 
 def load_config(config_path: str = "config.json") -> dict:
@@ -36,6 +38,12 @@ def main():
     アプリケーションを起動し、メインウィンドウを表示するエントリーポイント。
     """
     print("main")
+
+    # Numbaの初期化と設定
+    print("Numbaを初期化中...")
+    configure_numba(cache_enabled=True)
+    get_numba_info()
+
     app = QApplication(sys.argv)
 
     try:

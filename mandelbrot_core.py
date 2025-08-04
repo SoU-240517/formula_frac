@@ -1,15 +1,50 @@
 """
 マンデルブロ集合の数学的計算を担当するコアモジュール。
+Numbaを使用した高速化を実装。
 """
 import math
 import cmath
+import numpy as np
+from numba import jit, prange
 from PyQt6.QtGui import QImage
+
+
+@jit(nopython=True)
+def _mandelbrot_point_basic_jit(c_real: float, c_imag: float, max_iter: int) -> int:
+    """
+    基本的なマンデルブロ集合の計算（z = z^2 + c）をJITコンパイルで高速化。
+    
+    Args:
+        c_real (float): 複素数cの実部
+        c_imag (float): 複素数cの虚部
+        max_iter (int): 最大反復回数
+        
+    Returns:
+        int: 発散までの反復回数（発散しなければmax_iter）
+    """
+    z_real = 0.0
+    z_imag = 0.0
+    
+    for i in range(max_iter):
+        # z^2 + c の計算
+        z_real_new = z_real * z_real - z_imag * z_imag + c_real
+        z_imag_new = 2.0 * z_real * z_imag + c_imag
+        
+        # 発散判定
+        if z_real_new * z_real_new + z_imag_new * z_imag_new > 4.0:
+            return i
+            
+        z_real = z_real_new
+        z_imag = z_imag_new
+    
+    return max_iter
 
 
 def mandelbrot_point(c: complex, formula_str: str, max_iter: int = 100) -> int:
     """
     1点分のマンデルブロ集合の発散判定を行い、発散までの反復回数を返す。
-    ユーザーが指定した式（formula_str）でzを更新する。
+    基本的な式（z * z + c）の場合はJIT最適化版を使用し、
+    カスタム式の場合は従来のeval方式を使用する。
     
     Args:
         c (complex): 判定する複素数座標
@@ -19,6 +54,11 @@ def mandelbrot_point(c: complex, formula_str: str, max_iter: int = 100) -> int:
     Returns:
         int: 発散までの反復回数（発散しなければmax_iter）
     """
+    # 基本的なマンデルブロ式の場合は高速化版を使用
+    if formula_str.strip() in ['z * z + c', 'z**2 + c', 'z*z+c']:
+        return _mandelbrot_point_basic_jit(c.real, c.imag, max_iter)
+    
+    # カスタム式の場合は従来のeval方式
     z = 0
     now_iter = 0
     # evalで使う安全な辞書を作成
@@ -92,10 +132,101 @@ def pixel_color(n: int, max_iter: int) -> int:
     return (color << 16) | (color << 8) | color
 
 
+@jit(nopython=True, parallel=True)
+def _generate_mandelbrot_grid_jit(width: int, height: int, 
+                                re_start: float, re_end: float,
+                                im_start: float, im_end: float,
+                                max_iter: int) -> np.ndarray:
+    """
+    マンデルブロ集合のグリッド計算をJITコンパイルで並列実行。
+    基本的なマンデルブロ式（z = z^2 + c）専用の高速化版。
+    
+    Args:
+        width (int): 画像の幅
+        height (int): 画像の高さ
+        re_start (float): 実部の開始値
+        re_end (float): 実部の終了値
+        im_start (float): 虚部の開始値
+        im_end (float): 虚部の終了値
+        max_iter (int): 最大反復回数
+        
+    Returns:
+        np.ndarray: 反復回数の2次元配列
+    """
+    result = np.empty((height, width), dtype=np.int32)
+    
+    # 複素平面上のピクセル間隔を計算
+    pixel_width_complex = (re_end - re_start) / width
+    pixel_height_complex = (im_end - im_start) / height
+    
+    # 並列処理でy軸方向をループ
+    for y in prange(height):
+        c_imag = im_start + y * pixel_height_complex
+        for x in range(width):
+            c_real = re_start + x * pixel_width_complex
+            result[y, x] = _mandelbrot_point_basic_jit(c_real, c_imag, max_iter)
+    
+    return result
+
+
+@jit(nopython=True)
+def _array_to_rgb_jit(iterations: np.ndarray, max_iter: int) -> np.ndarray:
+    """
+    反復回数配列をRGB値に変換（JIT最適化版）。
+    
+    Args:
+        iterations (np.ndarray): 反復回数の2次元配列
+        max_iter (int): 最大反復回数
+        
+    Returns:
+        np.ndarray: RGB値の3次元配列 (height, width, 3)
+    """
+    height, width = iterations.shape
+    rgb_array = np.empty((height, width, 3), dtype=np.uint8)
+    
+    for y in range(height):
+        for x in range(width):
+            n = iterations[y, x]
+            color = 255 - int(n * 255 / max_iter)
+            rgb_array[y, x, 0] = color  # R
+            rgb_array[y, x, 1] = color  # G
+            rgb_array[y, x, 2] = color  # B
+    
+    return rgb_array
+
+
+def _numpy_to_qimage_fast(rgb_array: np.ndarray) -> QImage:
+    """
+    NumPy RGB配列を効率的にQImageに変換する。
+    
+    Args:
+        rgb_array (np.ndarray): RGB値の3次元配列 (height, width, 3)
+        
+    Returns:
+        QImage: 変換された画像
+    """
+    height, width, channels = rgb_array.shape
+    
+    # RGBA形式に変換（アルファチャンネルを追加）
+    rgba_array = np.empty((height, width, 4), dtype=np.uint8)
+    rgba_array[:, :, 0] = rgb_array[:, :, 2]  # B
+    rgba_array[:, :, 1] = rgb_array[:, :, 1]  # G
+    rgba_array[:, :, 2] = rgb_array[:, :, 0]  # R
+    rgba_array[:, :, 3] = 255  # A (完全不透明)
+    
+    # QImageを作成
+    bytes_per_line = width * 4
+    image = QImage(rgba_array.data, width, height, bytes_per_line, QImage.Format.Format_RGBA8888)
+    
+    # データのコピーを作成（メモリ安全性のため）
+    return image.copy()
+
+
 def generate_mandelbrot_image(width: int, height: int, formula_str: str, 
                             config: dict, max_iter: int = 100) -> QImage:
     """
     マンデルブロ集合の画像を生成する。
+    基本的な式の場合はJIT最適化版を使用し、大幅な高速化を実現。
     
     Args:
         width (int): 画像の幅
@@ -113,6 +244,28 @@ def generate_mandelbrot_image(width: int, height: int, formula_str: str,
     im_start = config['mandelbrot']['imaginary_range']['start']
     im_end = config['mandelbrot']['imaginary_range']['end']
     
+    # 基本的なマンデルブロ式の場合は高速化版を使用
+    if formula_str.strip() in ['z * z + c', 'z**2 + c', 'z*z+c']:
+        print("高速化版を使用")
+        try:
+            # JIT最適化版で計算
+            iterations = _generate_mandelbrot_grid_jit(
+                width, height, re_start, re_end, im_start, im_end, max_iter
+            )
+            
+            # RGB配列に変換
+            rgb_array = _array_to_rgb_jit(iterations, max_iter)
+            
+            # 効率的にQImageに変換
+            return _numpy_to_qimage_fast(rgb_array)
+        
+        except Exception as e:
+            print(f"高速化版でエラーが発生しました: {e}")
+            print("従来版にフォールバックします")
+            # 従来版にフォールバック
+    
+    # カスタム式の場合は従来の方式
+    print("従来版を使用")
     image = QImage(width, height, QImage.Format.Format_RGB32)
     for x in range(width):
         for y in range(height):

@@ -25,5 +25,10 @@
     "status_calculating": "計算中",
     "status_complete": "完了",
     "animation_interval": 300
+  },
+  "performance": {
+    "numba_cache_enabled": true,
+    "use_parallel_processing": true,
+    "optimization_notes": "基本的なマンデルブロ式 'z * z + c' では自動的にJIT最適化版が使用されます"
   }
 }

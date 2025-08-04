@@ -35,6 +35,19 @@ class MandelbrotWorker(QThread):
         画像生成を実行し、完了したらfinishedシグナルを発行する。
         """
         print("MandelbrotWorker: run")
+        print(f"画像サイズ: {self.width}x{self.height}, 式: '{self.formula_str}'")
+        
         max_iter = self.config['mandelbrot']['max_iterations']
+        
+        # 計算開始時刻を記録
+        import time
+        start_time = time.time()
+        
         image = generate_mandelbrot_image(self.width, self.height, self.formula_str, self.config, max_iter)
+        
+        # 計算時間を表示
+        end_time = time.time()
+        calculation_time = end_time - start_time
+        print(f"計算完了: {calculation_time:.2f}秒")
+        
         self.finished.emit(image)
