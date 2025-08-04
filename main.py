@@ -98,7 +98,7 @@ def generate_mandelbrot_image(width: int, height: int, formula_str: str, max_ite
     Returns:
         QImage: 生成された画像
     """
-    print("generate_mandelbrot_image 実行")
+    print("generate_mandelbrot_image")
     re_start, re_end = -2.0, 1.0  # 実部の範囲
     im_start, im_end = -1.2, 1.2  # 虚部の範囲
     image = QImage(width, height, QImage.Format.Format_RGB32)
@@ -126,7 +126,7 @@ class MandelbrotWorker(QThread):
             formula_str (str): ユーザーが入力したzの更新式
             parent (QObject): 親オブジェクト
         """
-        print("MandelbrotWorker __init__ 実行")
+        print("MandelbrotWorker: __init__")
         super().__init__(parent)
         self.width = width
         self.height = height
@@ -136,7 +136,7 @@ class MandelbrotWorker(QThread):
         """
         画像生成を実行し、完了したらfinishedシグナルを発行する。
         """
-        print("MandelbrotWorker run 実行")
+        print("MandelbrotWorker: run")
         image = generate_mandelbrot_image(self.width, self.height, self.formula_str)
         self.finished.emit(image)
 
@@ -150,7 +150,7 @@ class MandelbrotWindow(QMainWindow):
         """
         ウィンドウを初期化し、マンデルブロ集合画像とUIを表示する。
         """
-        print("MandelbrotWindow __init__ 実行")
+        print("MandelbrotWindow: __init__")
         super().__init__()
         self.setWindowTitle("マンデルブロ集合")
         self.setFixedSize(800, 650)  # 入力欄分だけ高さを少し増やす
@@ -206,7 +206,7 @@ class MandelbrotWindow(QMainWindow):
         入力された式でマンデルブロ集合画像を再生成し、表示する。
         画像生成はワーカースレッドで実行。
         """
-        print("MandelbrotWindow update_image 実行")
+        print("MandelbrotWindow: update_image")
         formula_str = self.formula_input.text()
         # ステータスバーに計算中を表示しアニメーション開始
         self.anim_step = 0
@@ -224,7 +224,7 @@ class MandelbrotWindow(QMainWindow):
         Args:
             image (QImage): 生成された画像
         """
-        print("MandelbrotWindow on_image_ready 実行")
+        print("MandelbrotWindow: on_image_ready")
         pixmap = QPixmap.fromImage(image)
         self.label.setPixmap(pixmap)
         self.anim_timer.stop()
@@ -235,7 +235,7 @@ def main():
     """
     アプリケーションを起動し、メインウィンドウを表示するエントリーポイント。
     """
-    print("main 実行")
+    print("main")
     app = QApplication(sys.argv)
     window = MandelbrotWindow()
     window.show()
