@@ -141,7 +141,7 @@ class CustomLogger:
         """プロジェクトのルートパスを設定します。ログ出力時のパス表示に使用されます。"""
         cls._project_root_path = project_root.resolve() if project_root else None
 
-    def log(self, message: str, level: str = "INFO", exc_info: object = None) -> None:
+    def log(self, message: str, level: str = "INFO", exc_info: object = None, skip_frames: int = 0) -> None:
         """指定されたレベルでログメッセージを記録します。"""
         # 初期化中のロギング呼び出しをチェック（循環依存を避けるため）
         if hasattr(CustomLogger, '_initializing') and CustomLogger._initializing:
@@ -164,8 +164,11 @@ class CustomLogger:
         if message_level_int < CustomLogger._current_level_int:
             return
 
-        # 呼び出し元の情報を取得
+        # 呼び出し元の情報を取得（skip_framesの分だけ追加でスキップ）
         frame = inspect.currentframe().f_back
+        for _ in range(skip_frames):
+            if frame.f_back is not None:
+                frame = frame.f_back
         filepath_abs = Path(frame.f_code.co_filename).resolve()
         lineno = frame.f_lineno
 
@@ -247,23 +250,23 @@ class CustomLogger:
 
     def debug(self, message: str, exc_info: object = None) -> None:
         """DEBUGレベルでログを出力します。"""
-        self.log(message, "DEBUG", exc_info)
+        self.log(message, "DEBUG", exc_info, skip_frames=1)
 
     def info(self, message: str, exc_info: object = None) -> None:
         """INFOレベルでログを出力します。"""
-        self.log(message, "INFO", exc_info)
+        self.log(message, "INFO", exc_info, skip_frames=1)
 
     def warning(self, message: str, exc_info: object = None) -> None:
         """WARNINGレベルでログを出力します。"""
-        self.log(message, "WARNING", exc_info)
+        self.log(message, "WARNING", exc_info, skip_frames=1)
 
     def error(self, message: str, exc_info: object = None) -> None:
         """ERRORレベルでログを出力します。"""
-        self.log(message, "ERROR", exc_info)
+        self.log(message, "ERROR", exc_info, skip_frames=1)
 
     def critical(self, message: str, exc_info: object = None) -> None:
         """CRITICALレベルでログを出力します。"""
-        self.log(message, "CRITICAL", exc_info)
+        self.log(message, "CRITICAL", exc_info, skip_frames=1)
 
 
 # グローバルロガーインスタンス
