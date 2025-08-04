@@ -1,234 +1,34 @@
 """
 PyQt6を用いて、ユーザーが任意のzの更新式を入力できるマンデルブロ集合ビジュアライザ。
-800x600ピクセルのウィンドウに、グレースケールで描画する。
+設定はJSONファイルから読み込み、モジュール化された構造で実装。
 """
 import sys
-from PyQt6.QtWidgets import QApplication, QLabel, QMainWindow, QLineEdit, QPushButton, QVBoxLayout, QWidget
-from PyQt6.QtGui import QImage, QPixmap
-from PyQt6.QtCore import Qt, QTimer, QThread, pyqtSignal
-import math
-import cmath
+import json
+from PyQt6.QtWidgets import QApplication, QMessageBox
+from mandelbrot_window import MandelbrotWindow
 
 
-def mandelbrot_point(c: complex, formula_str: str, max_iter: int = 100) -> int:
+def load_config(config_path: str = "config.json") -> dict:
     """
-    1点分のマンデルブロ集合の発散判定を行い、発散までの反復回数を返す。
-    ユーザーが指定した式（formula_str）でzを更新する。
+    設定ファイルを読み込む。
+
     Args:
-        c (complex): 判定する複素数座標
-        formula_str (str): ユーザーが入力したzの更新式（例: 'z * z + c'）
-        max_iter (int): 最大反復回数
+        config_path (str): 設定ファイルのパス
+
     Returns:
-        int: 発散までの反復回数（発散しなければmax_iter）
+        dict: 設定情報
+
+    Raises:
+        FileNotFoundError: 設定ファイルが見つからない場合
+        json.JSONDecodeError: JSONの形式が不正な場合
     """
-    z = 0
-    now_iter = 0
-    # evalで使う安全な辞書を作成
-    safe_dict = {
-        'z': z,
-        'c': c,
-        'n': now_iter,
-        # math, cmathの関数を一部許可
-        'abs': abs,
-        'sin': cmath.sin,
-        'cos': cmath.cos,
-        'exp': cmath.exp,
-        'log': cmath.log,
-        'pow': pow,
-        'sqrt': cmath.sqrt,
-        're': lambda x: x.real,
-        'im': lambda x: x.imag,
-        'pi': math.pi,
-        'e': math.e,
-    }
-    while abs(z) <= 2 and now_iter < max_iter:
-        safe_dict['z'] = z
-        safe_dict['c'] = c
-        safe_dict['n'] = now_iter
-        try:
-            z = eval(formula_str, {"__builtins__": {}}, safe_dict)
-        except Exception:
-            # 数式が不正な場合は0回で終了
-            return 0
-        now_iter += 1
-    return now_iter
-
-
-def complex_from_pixel(x: int, y: int, width: int, height: int, re_start: float, re_end: float, im_start: float, im_end: float) -> complex:
-    """
-    ピクセル座標(x, y)を複素平面上の座標に変換する。
-    Args:
-        x (int): ピクセルのx座標
-        y (int): ピクセルのy座標
-        width (int): 画像の幅
-        height (int): 画像の高さ
-        re_start (float): 実部の開始値
-        re_end (float): 実部の終了値
-        im_start (float): 虚部の開始値
-        im_end (float): 虚部の終了値
-    Returns:
-        complex: 対応する複素数
-    """
-    c_re = re_start + (x / width) * (re_end - re_start)
-    c_im = im_start + (y / height) * (im_end - im_start)
-    return complex(c_re, c_im)
-
-
-def pixel_color(n: int, max_iter: int) -> int:
-    """
-    反復回数nからグレースケールの色を計算する。
-    Args:
-        n (int): 反復回数
-        max_iter (int): 最大反復回数
-    Returns:
-        int: 24bit RGB値（グレースケール）
-    """
-    color = 255 - int(n * 255 / max_iter)
-    return (color << 16) | (color << 8) | color
-
-
-def generate_mandelbrot_image(width: int, height: int, formula_str: str, max_iter: int = 100) -> QImage:
-    """
-    マンデルブロ集合の画像を生成する。
-    Args:
-        width (int): 画像の幅
-        height (int): 画像の高さ
-        formula_str (str): ユーザーが入力したzの更新式
-        max_iter (int): 最大反復回数
-    Returns:
-        QImage: 生成された画像
-    """
-    print("generate_mandelbrot_image")
-    re_start, re_end = -2.0, 1.0  # 実部の範囲
-    im_start, im_end = -1.2, 1.2  # 虚部の範囲
-    image = QImage(width, height, QImage.Format.Format_RGB32)
-    for x in range(width):
-        for y in range(height):
-            c = complex_from_pixel(x, y, width, height, re_start, re_end, im_start, im_end)
-            n = mandelbrot_point(c, formula_str, max_iter)
-            image.setPixel(x, y, pixel_color(n, max_iter))
-    return image
-
-
-# 画像生成用ワーカースレッド
-class MandelbrotWorker(QThread):
-    """
-    マンデルブロ集合の画像生成をバックグラウンドで実行するワーカースレッド。
-    """
-    finished = pyqtSignal(QImage)
-
-    def __init__(self, width: int, height: int, formula_str: str, parent=None):
-        """
-        ワーカースレッドを初期化する。
-        Args:
-            width (int): 画像の幅
-            height (int): 画像の高さ
-            formula_str (str): ユーザーが入力したzの更新式
-            parent (QObject): 親オブジェクト
-        """
-        print("MandelbrotWorker: __init__")
-        super().__init__(parent)
-        self.width = width
-        self.height = height
-        self.formula_str = formula_str
-
-    def run(self):
-        """
-        画像生成を実行し、完了したらfinishedシグナルを発行する。
-        """
-        print("MandelbrotWorker: run")
-        image = generate_mandelbrot_image(self.width, self.height, self.formula_str)
-        self.finished.emit(image)
-
-
-class MandelbrotWindow(QMainWindow):
-    """
-    マンデルブロ集合を表示するメインウィンドウクラス。
-    ユーザーが数式を入力し、再描画できる。
-    """
-    def __init__(self):
-        """
-        ウィンドウを初期化し、マンデルブロ集合画像とUIを表示する。
-        """
-        print("MandelbrotWindow: __init__")
-        super().__init__()
-        self.setWindowTitle("マンデルブロ集合")
-        self.setFixedSize(800, 650)  # 入力欄分だけ高さを少し増やす
-
-        # メインウィジェットとレイアウト
-        central_widget = QWidget(self)
-        layout = QVBoxLayout(central_widget)
-
-        # 数式入力欄
-        self.formula_input = QLineEdit(self)
-        self.formula_input.setText("z * z + c")  # デフォルト式
-        self.formula_input.setPlaceholderText("zの更新式を入力 (例: z * z + c)")
-        layout.addWidget(self.formula_input)
-
-        # 再描画ボタン
-        self.redraw_button = QPushButton("再描画", self)
-        layout.addWidget(self.redraw_button)
-
-        # 画像表示用ラベル
-        self.label = QLabel(self)
-        self.label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        layout.addWidget(self.label)
-
-        self.setCentralWidget(central_widget)
-
-        # ステータスバー追加
-        self.status = self.statusBar()
-        self.status.showMessage("準備完了")
-
-        # アニメーション用タイマー
-        self.anim_timer = QTimer(self)
-        self.anim_timer.setInterval(300)  # 300msごと
-        self.anim_timer.timeout.connect(self.update_anim)
-        self.anim_step = 0
-        self.anim_base = "計算中"
-
-        # 最初の描画
-        self.update_image()
-
-        # ボタン押下時の処理を接続
-        self.redraw_button.clicked.connect(self.update_image)
-
-    def update_anim(self):
-        """
-        ステータスバーの「計算中...」アニメーションを更新する。
-        """
-        self.anim_step = (self.anim_step + 1) % 4
-        dots = "." * self.anim_step
-        self.status.showMessage(self.anim_base + dots)
-
-    def update_image(self):
-        """
-        入力された式でマンデルブロ集合画像を再生成し、表示する。
-        画像生成はワーカースレッドで実行。
-        """
-        print("MandelbrotWindow: update_image")
-        formula_str = self.formula_input.text()
-        # ステータスバーに計算中を表示しアニメーション開始
-        self.anim_step = 0
-        self.anim_base = "計算中"
-        self.anim_timer.start()
-        self.status.showMessage(self.anim_base)
-        # 画像生成を別スレッドで実行
-        self.worker = MandelbrotWorker(800, 600, formula_str)
-        self.worker.finished.connect(self.on_image_ready)
-        self.worker.start()
-
-    def on_image_ready(self, image: QImage):
-        """
-        画像生成完了時に呼ばれ、画像を表示し、アニメーションを止める。
-        Args:
-            image (QImage): 生成された画像
-        """
-        print("MandelbrotWindow: on_image_ready")
-        pixmap = QPixmap.fromImage(image)
-        self.label.setPixmap(pixmap)
-        self.anim_timer.stop()
-        self.status.showMessage("完了")
+    try:
+        with open(config_path, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    except FileNotFoundError:
+        raise FileNotFoundError(f"設定ファイル '{config_path}' が見つかりません。")
+    except json.JSONDecodeError as e:
+        raise json.JSONDecodeError(f"設定ファイルのJSON形式が不正です: {e}")
 
 
 def main():
@@ -237,9 +37,33 @@ def main():
     """
     print("main")
     app = QApplication(sys.argv)
-    window = MandelbrotWindow()
-    window.show()
-    sys.exit(app.exec())
+
+    try:
+        # 設定ファイルを読み込み
+        config = load_config()
+
+        # メインウィンドウを作成・表示
+        window = MandelbrotWindow(config)
+        window.show()
+
+        sys.exit(app.exec())
+
+    except (FileNotFoundError, json.JSONDecodeError) as e:
+        # 設定ファイルの読み込みエラーを表示
+        error_dialog = QMessageBox()
+        error_dialog.setIcon(QMessageBox.Icon.Critical)
+        error_dialog.setWindowTitle("設定エラー")
+        error_dialog.setText(str(e))
+        error_dialog.exec()
+        sys.exit(1)
+    except Exception as e:
+        # その他の予期しないエラー
+        error_dialog = QMessageBox()
+        error_dialog.setIcon(QMessageBox.Icon.Critical)
+        error_dialog.setWindowTitle("アプリケーションエラー")
+        error_dialog.setText(f"予期しないエラーが発生しました: {e}")
+        error_dialog.exec()
+        sys.exit(1)
 
 
 if __name__ == "__main__":

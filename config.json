@@ -1,0 +1,29 @@
+{
+  "window": {
+    "title": "マンデルブロ集合",
+    "width": 800,
+    "height": 650,
+    "image_width": 800,
+    "image_height": 600
+  },
+  "mandelbrot": {
+    "default_formula": "z * z + c",
+    "max_iterations": 100,
+    "real_range": {
+      "start": -2.0,
+      "end": 1.0
+    },
+    "imaginary_range": {
+      "start": -1.2,
+      "end": 1.2
+    }
+  },
+  "ui": {
+    "formula_placeholder": "zの更新式を入力 (例: z * z + c)",
+    "redraw_button_text": "再描画",
+    "status_ready": "準備完了",
+    "status_calculating": "計算中",
+    "status_complete": "完了",
+    "animation_interval": 300
+  }
+}
