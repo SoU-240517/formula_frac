@@ -4,6 +4,7 @@
 from PyQt6.QtCore import QThread, pyqtSignal
 from PyQt6.QtGui import QImage
 from mandelbrot_core import generate_mandelbrot_image
+from logger.custom_logger import logger
 
 
 class MandelbrotWorker(QThread):
@@ -23,7 +24,7 @@ class MandelbrotWorker(QThread):
             config (dict): 設定情報
             parent (QObject): 親オブジェクト
         """
-        print("MandelbrotWorker: __init__")
+        logger.debug(f"MandelbrotWorker: 初期化 - サイズ: {width}x{height}, 式: '{formula_str}'")
         super().__init__(parent)
         self.width = width
         self.height = height
@@ -34,20 +35,27 @@ class MandelbrotWorker(QThread):
         """
         画像生成を実行し、完了したらfinishedシグナルを発行する。
         """
-        print("MandelbrotWorker: run")
-        print(f"画像サイズ: {self.width}x{self.height}, 式: '{self.formula_str}'")
+        logger.info(f"画像生成を開始します - サイズ: {self.width}x{self.height}, 式: '{self.formula_str}'")
         
         max_iter = self.config['mandelbrot']['max_iterations']
+        logger.debug(f"最大反復回数: {max_iter}")
         
         # 計算開始時刻を記録
         import time
         start_time = time.time()
         
-        image = generate_mandelbrot_image(self.width, self.height, self.formula_str, self.config, max_iter)
-        
-        # 計算時間を表示
-        end_time = time.time()
-        calculation_time = end_time - start_time
-        print(f"計算完了: {calculation_time:.2f}秒")
-        
-        self.finished.emit(image)
+        try:
+            image = generate_mandelbrot_image(self.width, self.height, self.formula_str, self.config, max_iter)
+            
+            # 計算時間を表示
+            end_time = time.time()
+            calculation_time = end_time - start_time
+            logger.info(f"画像生成が完了しました: {calculation_time:.2f}秒")
+            
+            self.finished.emit(image)
+        except Exception as e:
+            logger.error(f"画像生成中にエラーが発生しました: {e}", exc_info=True)
+            # エラーの場合は空の画像を送信
+            empty_image = QImage(self.width, self.height, QImage.Format.Format_RGB32)
+            empty_image.fill(0)  # 黒で塗りつぶし
+            self.finished.emit(empty_image)

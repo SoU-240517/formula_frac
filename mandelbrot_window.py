@@ -5,6 +5,7 @@ from PyQt6.QtWidgets import QMainWindow, QLabel, QLineEdit, QPushButton, QVBoxLa
 from PyQt6.QtGui import QImage, QPixmap
 from PyQt6.QtCore import Qt, QTimer
 from mandelbrot_worker import MandelbrotWorker
+from logger.custom_logger import logger
 
 
 class MandelbrotWindow(QMainWindow):
@@ -20,7 +21,7 @@ class MandelbrotWindow(QMainWindow):
         Args:
             config (dict): 設定情報
         """
-        print("MandelbrotWindow: __init__")
+        logger.debug("MandelbrotWindow: 初期化を開始します")
         super().__init__()
         self.config = config
         self._setup_window()
@@ -30,13 +31,16 @@ class MandelbrotWindow(QMainWindow):
         self._connect_signals()
         
         # 最初の描画
+        logger.info("MandelbrotWindow: 初期描画を開始します")
         self.update_image()
 
     def _setup_window(self):
         """ウィンドウの基本設定を行う。"""
+        logger.debug("ウィンドウの基本設定を行います")
         window_config = self.config['window']
         self.setWindowTitle(window_config['title'])
         self.setFixedSize(window_config['width'], window_config['height'])
+        logger.debug(f"ウィンドウサイズを設定しました: {window_config['width']}x{window_config['height']}")
 
     def _setup_ui(self):
         """UIコンポーネントを設定する。"""
@@ -66,6 +70,7 @@ class MandelbrotWindow(QMainWindow):
 
     def _setup_status_bar(self):
         """ステータスバーを設定する。"""
+        logger.debug("ステータスバーを設定します")
         self.status = self.statusBar()
         self.status.showMessage(self.config['ui']['status_ready'])
 
@@ -94,17 +99,19 @@ class MandelbrotWindow(QMainWindow):
         入力された式でマンデルブロ集合画像を再生成し、表示する。
         画像生成はワーカースレッドで実行。
         """
-        print("MandelbrotWindow: update_image")
         formula_str = self.formula_input.text()
+        logger.info(f"画像更新を開始します。数式: '{formula_str}'")
         
         # ステータスバーに計算中を表示しアニメーション開始
         self.anim_step = 0
         self.anim_base = self.config['ui']['status_calculating']
         self.anim_timer.start()
         self.status.showMessage(self.anim_base)
+        logger.debug("計算中アニメーションを開始しました")
         
         # 画像生成を別スレッドで実行
         window_config = self.config['window']
+        logger.debug(f"ワーカースレッドを開始します。画像サイズ: {window_config['image_width']}x{window_config['image_height']}")
         self.worker = MandelbrotWorker(
             window_config['image_width'], 
             window_config['image_height'], 
@@ -121,8 +128,9 @@ class MandelbrotWindow(QMainWindow):
         Args:
             image (QImage): 生成された画像
         """
-        print("MandelbrotWindow: on_image_ready")
+        logger.info(f"画像生成が完了しました。サイズ: {image.width()}x{image.height()}")
         pixmap = QPixmap.fromImage(image)
         self.label.setPixmap(pixmap)
         self.anim_timer.stop()
         self.status.showMessage(self.config['ui']['status_complete'])
+        logger.debug("計算中アニメーションを停止しました")

@@ -7,6 +7,7 @@ import cmath
 import numpy as np
 from numba import jit, prange
 from PyQt6.QtGui import QImage
+from logger.custom_logger import logger
 
 
 @jit(nopython=True)
@@ -238,15 +239,17 @@ def generate_mandelbrot_image(width: int, height: int, formula_str: str,
     Returns:
         QImage: 生成された画像
     """
-    print("generate_mandelbrot_image")
+    logger.debug(f"画像生成を開始: {width}x{height}, 式: '{formula_str}', 最大反復: {max_iter}")
     re_start = config['mandelbrot']['real_range']['start']
     re_end = config['mandelbrot']['real_range']['end']
     im_start = config['mandelbrot']['imaginary_range']['start']
     im_end = config['mandelbrot']['imaginary_range']['end']
     
+    logger.debug(f"複素平面範囲: 実部[{re_start}, {re_end}], 虚部[{im_start}, {im_end}]")
+    
     # 基本的なマンデルブロ式の場合は高速化版を使用
     if formula_str.strip() in ['z * z + c', 'z**2 + c', 'z*z+c']:
-        print("高速化版を使用")
+        logger.info("高速化版（JIT最適化）を使用します")
         try:
             # JIT最適化版で計算
             iterations = _generate_mandelbrot_grid_jit(
@@ -257,19 +260,31 @@ def generate_mandelbrot_image(width: int, height: int, formula_str: str,
             rgb_array = _array_to_rgb_jit(iterations, max_iter)
             
             # 効率的にQImageに変換
+            logger.debug("高速化版での画像生成が完了しました")
             return _numpy_to_qimage_fast(rgb_array)
         
         except Exception as e:
-            print(f"高速化版でエラーが発生しました: {e}")
-            print("従来版にフォールバックします")
+            logger.warning(f"高速化版でエラーが発生しました: {e}")
+            logger.info("従来版にフォールバックします")
             # 従来版にフォールバック
     
     # カスタム式の場合は従来の方式
-    print("従来版を使用")
+    logger.info("従来版（eval方式）を使用します")
     image = QImage(width, height, QImage.Format.Format_RGB32)
+    total_pixels = width * height
+    processed_pixels = 0
+    
     for x in range(width):
         for y in range(height):
             c = complex_from_pixel(x, y, width, height, re_start, re_end, im_start, im_end)
             n = mandelbrot_point(c, formula_str, max_iter)
             image.setPixel(x, y, pixel_color(n, max_iter))
+            processed_pixels += 1
+            
+            # 進捗をログ出力（10%刻み）
+            if processed_pixels % (total_pixels // 10) == 0:
+                progress = (processed_pixels / total_pixels) * 100
+                logger.debug(f"従来版処理進捗: {progress:.0f}%")
+    
+    logger.debug("従来版での画像生成が完了しました")
     return image

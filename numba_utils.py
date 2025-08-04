@@ -13,8 +13,9 @@ def configure_numba(cache_enabled: bool = True):
     Args:
         cache_enabled (bool): キャッシュを有効にするかどうか
     """
+    from logger.custom_logger import logger
     numba.config.CACHE = cache_enabled
-    print(f"Numbaキャッシュ設定: {'有効' if cache_enabled else '無効'}")
+    logger.info(f"Numbaキャッシュ設定: {'有効' if cache_enabled else '無効'}")
 
 
 def clear_numba_cache():
@@ -41,7 +42,8 @@ def get_numba_info():
     """
     Numbaの設定情報を表示する。
     """
-    print(f"Numba バージョン: {numba.__version__}")
-    print(f"キャッシュ有効: {numba.config.CACHE}")
-    print(f"キャッシュディレクトリ: {numba.config.CACHE_DIR}")
-    print(f"並列処理スレッド数: {numba.config.NUMBA_NUM_THREADS}")
+    from logger.custom_logger import logger
+    logger.info(f"Numba バージョン: {numba.__version__}")
+    logger.info(f"キャッシュ有効: {numba.config.CACHE}")
+    logger.info(f"キャッシュディレクトリ: {numba.config.CACHE_DIR}")
+    logger.info(f"並列処理スレッド数: {numba.config.NUMBA_NUM_THREADS}")
