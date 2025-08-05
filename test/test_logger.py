@@ -6,7 +6,7 @@ import sys
 from pathlib import Path
 
 # プロジェクトルートをパスに追加
-sys.path.insert(0, str(Path(__file__).parent))
+sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from logger.custom_logger import logger, CustomLogger
 
@@ -16,7 +16,7 @@ def test_logger_basic():
     print("=== ロガー基本機能テスト ===")
     
     # プロジェクトルートを設定
-    CustomLogger.set_project_root(Path(__file__).parent)
+    CustomLogger.set_project_root(Path(__file__).parent.parent)
     
     # 各レベルでのログ出力テスト
     logger.debug("これはDEBUGメッセージです")
