@@ -1,17 +1,17 @@
-# Product Overview
+# プロダクト概要
 
-This is a Mandelbrot set visualizer built with PyQt6 that allows users to input custom mathematical formulas for generating fractal patterns. The application provides an interactive GUI where users can:
+これはPyQt6で構築されたマンデルブロ集合ビジュアライザーで、ユーザーがフラクタルパターンを生成するためのカスタム数式を入力できるアプリケーションです。このアプリケーションは以下の機能を持つインタラクティブなGUIを提供します：
 
-- Enter custom z update formulas (e.g., "z * z + c")
-- Generate and display Mandelbrot set visualizations in grayscale
-- View real-time computation progress with animated status updates
-- Explore different fractal patterns through formula experimentation
+- カスタムz更新式の入力（例："z * z + c"）
+- マンデルブロ集合の可視化をグレースケールで生成・表示
+- アニメーション付きステータス更新によるリアルタイム計算進捗表示
+- 数式実験を通じた様々なフラクタルパターンの探索
 
-The project includes sample implementations demonstrating various fractal generation approaches and serves as both a standalone application and a reference for fractal visualization techniques.
+このプロジェクトには、様々なフラクタル生成アプローチを実演するサンプル実装が含まれており、スタンドアロンアプリケーションとしても、フラクタル可視化技術のリファレンスとしても機能します。
 
-## Key Features
-- Interactive formula input with real-time validation
-- Multi-threaded image generation for responsive UI
-- 800x600 pixel grayscale rendering
-- Safe mathematical expression evaluation
-- Progress indication during computation
+## 主要機能
+- リアルタイム検証付きインタラクティブ数式入力
+- レスポンシブUIのためのマルチスレッド画像生成
+- 800x600ピクセルのグレースケールレンダリング
+- 安全な数式評価
+- 計算中の進捗表示

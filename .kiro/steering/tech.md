@@ -1,48 +1,48 @@
-# Technology Stack
+# 技術スタック
 
-## Core Technologies
-- **Python 3.12+**: Primary programming language
-- **PyQt6**: GUI framework for the main application interface
-- **Virtual Environment**: `venv` for dependency isolation
+## コア技術
+- **Python 3.12+**: 主要プログラミング言語
+- **PyQt6**: メインアプリケーションインターフェース用GUIフレームワーク
+- **仮想環境**: 依存関係分離のための`venv`
 
-## Key Libraries
-- `PyQt6.QtWidgets`: UI components (QApplication, QMainWindow, QLineEdit, etc.)
-- `PyQt6.QtGui`: Graphics handling (QImage, QPixmap)
-- `PyQt6.QtCore`: Threading and signals (QThread, pyqtSignal, QTimer)
-- `math` & `cmath`: Mathematical operations for complex number calculations
+## 主要ライブラリ
+- `PyQt6.QtWidgets`: UIコンポーネント（QApplication、QMainWindow、QLineEditなど）
+- `PyQt6.QtGui`: グラフィック処理（QImage、QPixmap）
+- `PyQt6.QtCore`: スレッドとシグナル（QThread、pyqtSignal、QTimer）
+- `math` & `cmath`: 複素数計算のための数学演算
 
-## Development Environment
-- **Language**: Japanese comments and documentation
-- **IDE**: VSCode (excluded from version control)
-- **Version Control**: Git with standard Python .gitignore
+## 開発環境
+- **言語**: 日本語コメントとドキュメント
+- **IDE**: VSCode（バージョン管理から除外）
+- **バージョン管理**: 標準Python .gitignoreを使用したGit
 
-## Common Commands
+## 共通コマンド
 
-### Environment Setup
+### 環境セットアップ
 ```bash
-# Create virtual environment
+# 仮想環境作成
 python -m venv venv
 
-# Activate virtual environment (Windows)
+# 仮想環境アクティベート（Windows）
 venv\Scripts\activate
 
-# Install dependencies (if requirements.txt exists)
+# 依存関係インストール（requirements.txtが存在する場合）
 pip install -r requirements.txt
 ```
 
-### Running the Application
+### アプリケーション実行
 ```bash
-# Run main application
+# メインアプリケーション実行
 python main.py
 ```
 
-### Development
+### 開発
 ```bash
-# Install PyQt6 (main dependency)
+# PyQt6インストール（主要依存関係）
 pip install PyQt6
 ```
 
-## Architecture Notes
-- Multi-threaded design using QThread for non-blocking image generation
-- Safe expression evaluation using restricted eval() with controlled namespace
-- Signal-slot pattern for UI updates and thread communication
+## アーキテクチャ注記
+- ノンブロッキング画像生成のためのQThreadを使用したマルチスレッド設計
+- 制御された名前空間での制限付きeval()を使用した安全な式評価
+- UI更新とスレッド通信のためのシグナル・スロットパターン
