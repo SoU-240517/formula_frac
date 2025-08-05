@@ -101,6 +101,15 @@ class CustomLogger:
                 if CustomLogger._log_file_path and CustomLogger._log_file_path.parent:
                     CustomLogger._log_file_path.parent.mkdir(parents=True, exist_ok=True)
                 
+                # 起動時ログクリア設定の確認と実行
+                clear_on_startup = logging_config.get("clear_on_startup", False)
+                if clear_on_startup and CustomLogger._log_file_path and CustomLogger._log_file_path.exists():
+                    try:
+                        CustomLogger._log_file_path.unlink()  # ログファイルを削除
+                        print(f"[INFO] ログファイルをクリアしました: {CustomLogger._log_file_path}", flush=True)
+                    except Exception as e:
+                        print(f"[WARNING] ログファイルのクリアに失敗しました: {CustomLogger._log_file_path}, Error: {e}", flush=True)
+                
                 # 設定適用完了をログに出力
                 if CustomLogger._is_enabled:
                     self.log(f"CustomLogger: 設定ファイルからロガー設定を適用しました。レベル: {level_str}, 有効: {enabled_setting}, ファイル: {CustomLogger._log_file_path}", level="INFO")
@@ -140,6 +149,29 @@ class CustomLogger:
     def set_project_root(cls, project_root: Path) -> None:
         """プロジェクトのルートパスを設定します。ログ出力時のパス表示に使用されます。"""
         cls._project_root_path = project_root.resolve() if project_root else None
+
+    @classmethod
+    def clear_log_file(cls) -> bool:
+        """
+        ログファイルの内容をクリア（削除）します。
+        
+        Returns:
+            bool: クリアが成功した場合True、失敗した場合False
+        """
+        if not cls._log_file_path:
+            return False
+            
+        try:
+            if cls._log_file_path.exists():
+                cls._log_file_path.unlink()
+                print(f"[INFO] ログファイルをクリアしました: {cls._log_file_path}", flush=True)
+                return True
+            else:
+                print(f"[INFO] ログファイルが存在しないため、クリアをスキップしました: {cls._log_file_path}", flush=True)
+                return True
+        except Exception as e:
+            print(f"[ERROR] ログファイルのクリアに失敗しました: {cls._log_file_path}, Error: {e}", flush=True)
+            return False
 
     def log(self, message: str, level: str = "INFO", exc_info: object = None, skip_frames: int = 0) -> None:
         """指定されたレベルでログメッセージを記録します。"""

@@ -34,6 +34,7 @@
   "logging": {
     "level": "INFO",
     "enabled": true,
-    "file": "logs/app.log"
+    "file": "logs/app.log",
+    "clear_on_startup": false
   }
 }

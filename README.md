@@ -89,6 +89,37 @@ python benchmark.py
 - **複素平面範囲**: 表示する複素平面の範囲
 - **最大反復回数**: 発散判定の反復回数
 - **UI設定**: ボタンテキストやアニメーション間隔
+- **ログ設定**: ログレベル、出力ファイル、クリア設定
+
+### ログファイルのクリア
+
+ログファイルの内容をクリアする方法は2つあります：
+
+#### 1. 自動クリア（起動時）
+`config.json`の`logging`セクションで`clear_on_startup`を`true`に設定：
+
+```json
+{
+  "logging": {
+    "level": "INFO",
+    "enabled": true,
+    "file": "logs/app.log",
+    "clear_on_startup": true
+  }
+}
+```
+
+#### 2. 手動クリア（プログラムから）
+```python
+from logger.custom_logger import CustomLogger
+
+# ログファイルをクリア
+success = CustomLogger.clear_log_file()
+if success:
+    print("ログファイルをクリアしました")
+else:
+    print("ログファイルのクリアに失敗しました")
+```
 
 ## 技術詳細
 
